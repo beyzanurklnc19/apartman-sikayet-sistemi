@@ -1,8 +1,6 @@
 <?php
 session_start();
-
-$conn = new mysqli("localhost", "root", "", "apartman_db");
-$conn->set_charset("utf8");
+require_once "db.php";
 
 $error = "";
 
@@ -18,7 +16,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     if ($result && $result->num_rows === 1) {
         $user = $result->fetch_assoc();
 
-        // 🔐 HASH + eski düz şifre uyumu
+        // 🔐 Hash + eski düz şifre uyumu
         if (
             password_verify($password, $user["password"]) ||
             $user["password"] === $password
@@ -75,6 +73,7 @@ body { background:#f8f7f4; }
 <input type="password" name="password" class="form-control mb-3" placeholder="Şifre" required>
 <button class="btn btn-main w-100">Giriş</button>
 </form>
+
 <div class="text-center mt-3">
     <small>
         Hesabın yok mu?
