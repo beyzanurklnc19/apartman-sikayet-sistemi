@@ -2,6 +2,22 @@
 session_start();
 require "db.php";
 
+// Giriş kontrolü
+if (!isset($_SESSION["user_id"])) {
+    header("Location: login.php");
+    exit;
+}
+
+// SADECE NORMAL KULLANICI (SAKİN)
+if ($_SESSION["role"] !== "user") {
+    header("Location: login.php");
+    exit;
+}
+?>
+<?php
+session_start();
+require "db.php";
+
 // giriş kontrolü
 if (!isset($_SESSION["user_id"]) || $_SESSION["role"] !== "user") {
     header("Location: login.php");
@@ -124,3 +140,4 @@ placeholder="Şikayetinizi yazınız"></textarea>
 </div>
 </body>
 </html>
+
