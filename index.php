@@ -1,17 +1,11 @@
 <?php
 session_start();
+require "db.php";
 
 // giriş kontrolü
-if (!isset($_SESSION["user_id"]) || $_SESSION["role"] !== "sakin") {
+if (!isset($_SESSION["user_id"]) || $_SESSION["role"] !== "user") {
     header("Location: login.php");
     exit;
-}
-
-$conn = new mysqli("localhost", "root", "", "apartman_db");
-$conn->set_charset("utf8");
-
-if ($conn->connect_error) {
-    die("Veritabanı hatası");
 }
 
 $user_id = $_SESSION["user_id"];
@@ -22,26 +16,31 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $description = trim($_POST["description"] ?? "");
 
     if ($description !== "") {
-        $stmt = $conn->prepare(
-            "INSERT INTO complaints (user_id, category_id, description, status)
-             VALUES (?, ?, ?, 'Beklemede')"
-        );
-        $stmt->bind_param("iis", $user_id, $category_id, $description);
-        $stmt->execute();
+        $stmt = $conn->prepare("
+            INSERT INTO complaints (user_id, category_id, description, status)
+            VALUES (:user_id, :category_id, :description, 'Beklemede')
+        ");
+        $stmt->execute([
+            ":user_id" => $user_id,
+            ":category_id" => $category_id,
+            ":description" => $description
+        ]);
     }
 }
 
 // KATEGORİLER
-$categories = $conn->query("SELECT * FROM categories");
+$categories = $conn->query("SELECT * FROM categories")->fetchAll(PDO::FETCH_ASSOC);
 
 // SADECE BU KULLANICININ ŞİKAYETLERİ
-$complaints = $conn->query("
+$stmt = $conn->prepare("
     SELECT c.id, c.description, c.status, cat.name AS category
     FROM complaints c
     LEFT JOIN categories cat ON c.category_id = cat.id
-    WHERE c.user_id = $user_id
+    WHERE c.user_id = :user_id
     ORDER BY c.id DESC
 ");
+$stmt->execute([":user_id" => $user_id]);
+$complaints = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 <!doctype html>
 <html lang="tr">
@@ -79,9 +78,9 @@ body { background:#f8f7f4; }
 <form method="post">
 <select name="category_id" class="form-select mb-3">
 <option value="">Kategori seçiniz</option>
-<?php while($cat = $categories->fetch_assoc()): ?>
+<?php foreach ($categories as $cat): ?>
 <option value="<?= $cat["id"] ?>"><?= $cat["name"] ?></option>
-<?php endwhile; ?>
+<?php endforeach; ?>
 </select>
 
 <textarea name="description" class="form-control mb-3"
@@ -105,7 +104,7 @@ placeholder="Şikayetinizi yazınız"></textarea>
 </thead>
 <tbody>
 
-<?php while($row = $complaints->fetch_assoc()): ?>
+<?php foreach ($complaints as $row): ?>
 <tr>
 <td><?= $row["id"] ?></td>
 <td><?= $row["category"] ?? "—" ?></td>
@@ -116,7 +115,7 @@ placeholder="Şikayetinizi yazınız"></textarea>
 </span>
 </td>
 </tr>
-<?php endwhile; ?>
+<?php endforeach; ?>
 
 </tbody>
 </table>
