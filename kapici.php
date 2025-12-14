@@ -1,109 +1,64 @@
 <?php
 session_start();
+require "db.php";
 
-if (!isset($_SESSION["role"]) || $_SESSION["role"] !== "kapici") {
-    header("Location: login.php");
-    exit;
-}
-?>
-<div style="text-align:right; margin-bottom:20px;">
-  <a href="logout.php" class="btn btn-outline-secondary">Çıkış</a>
-</div>
-<?php
-session_start();
-
-if (!isset($_SESSION["role"]) || $_SESSION["role"] !== "kapici") {
+// kapıcı kontrolü
+if (!isset($_SESSION["user_id"]) || $_SESSION["role"] !== "kapici") {
     header("Location: login.php");
     exit;
 }
 
-$conn = new mysqli("localhost", "root", "", "apartman_db");
-$conn->set_charset("utf8");
-
-// Çözüldü butonu
-if (isset($_GET["done"])) {
-    $id = intval($_GET["done"]);
-    $conn->query("UPDATE complaints SET status='Çözüldü' WHERE id=$id");
-}
-
-$complaints = [];
-
-$sql = "
-SELECT complaints.id, complaints.description, complaints.status, categories.name AS category
-FROM complaints
-LEFT JOIN categories ON complaints.category_id = categories.id
-WHERE complaints.status = 'Beklemede'
-ORDER BY complaints.id DESC
-";
-
-$result = $conn->query($sql);
-
-if ($result) {
-    while ($row = $result->fetch_assoc()) {
-        $complaints[] = $row;
-    }
-}
+// şikayetleri çek
+$stmt = $conn->query("
+    SELECT c.id, c.description, c.status, u.name, u.surname
+    FROM complaints c
+    JOIN users u ON c.user_id = u.id
+    ORDER BY c.id DESC
+");
+$complaints = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
-
 <!doctype html>
 <html lang="tr">
 <head>
-    <meta charset="utf-8">
-    <title>Kapıcı Paneli</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-
-    <style>
-        body {
-            background-color: #f8f7f4;
-        }
-        .card {
-            border-radius: 16px;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.08);
-        }
-        h2 {
-            color: #5a7f73;
-        }
-        .btn-main {
-            background-color: #8fb9a8;
-            color: white;
-            border-radius: 8px;
-        }
-    </style>
+<meta charset="utf-8">
+<title>Kapıcı Paneli</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 
-<body>
+<body class="bg-light">
 <div class="container my-5">
 
-    <h2 class="mb-4">🧹 Kapıcı Paneli – Yapılacak İşler</h2>
+<div class="d-flex justify-content-between align-items-center mb-4">
+<h2>🧹 Kapıcı Paneli</h2>
+<a href="logout.php" class="btn btn-outline-secondary">Çıkış</a>
+</div>
 
-    <div class="card p-4">
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>#</th>
-                    <th>Kategori</th>
-                    <th>Şikayet</th>
-                    <th>İşlem</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php foreach ($complaints as $c): ?>
-                <tr>
-                    <td><?= $c["id"] ?></td>
-                    <td><?= $c["category"] ?? "—" ?></td>
-                    <td><?= $c["description"] ?></td>
-                    <td>
-                        <a href="?done=<?= $c["id"] ?>" class="btn btn-main btn-sm">
-                            Çözüldü
-                        </a>
-                    </td>
-                </tr>
-                <?php endforeach; ?>
-            </tbody>
-        </table>
-    </div>
+<div class="card p-4">
+<h5>Şikayetler</h5>
+
+<table class="table table-bordered mt-3">
+<thead>
+<tr>
+<th>#</th>
+<th>Sakin</th>
+<th>Şikayet</th>
+<th>Durum</th>
+</tr>
+</thead>
+<tbody>
+
+<?php foreach ($complaints as $c): ?>
+<tr>
+<td><?= $c["id"] ?></td>
+<td><?= $c["name"] . " " . $c["surname"] ?></td>
+<td><?= $c["description"] ?></td>
+<td><?= $c["status"] ?></td>
+</tr>
+<?php endforeach; ?>
+
+</tbody>
+</table>
+</div>
 
 </div>
 </body>
